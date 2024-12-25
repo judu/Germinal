@@ -15,26 +15,26 @@
 # You should have received a copy of the GNU General Public License
 # along with Germinal.  If not, see <http://www.gnu.org/licenses/>.
 
-m4_define([germinal_version],    [26])
+m4_define([germinal_version],    [47])
 
 # Build system requirements
-m4_define([autoconf_required],   [2.69])
-m4_define([automake_required],   [1.15])
+m4_define([autoconf_required],   [2.72])
+m4_define([automake_required],   [1.17])
 m4_define([pkgconfig_required],  [0.29])
 
 # Glib and Gtk macros and dependencies
 m4_define([glib_major_required], [2])
-m4_define([glib_minor_required], [58])
+m4_define([glib_minor_required], [82])
 m4_define([glib_api_required],   [G_ENCODE_VERSION(glib_major_required, glib_minor_required)])
 m4_define([glib_required],       [glib_major_required.glib_minor_required.0])
-m4_define([gtk_major_required],  [3])
-m4_define([gtk_minor_required],  [24])
+m4_define([gtk_major_required],  [4])
+m4_define([gtk_minor_required],  [16])
 m4_define([gtk_api_required],    [G_ENCODE_VERSION(gtk_major_required, gtk_minor_required)])
 m4_define([gtk_required],        [gtk_major_required.gtk_minor_required.0])
 
 # Other dependencies
-m4_define([vte_required],        [0.54.2])
-m4_define([gds_required],        [3.28.1])
+m4_define([vte_required],        [0.78.0])
+m4_define([gds_required],        [47.0])
 
 AC_PREREQ(autoconf_required)
 AC_INIT([Germinal], [germinal_version], [Marc-Antoine@Perennou.com], [germinal])
