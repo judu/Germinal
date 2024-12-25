@@ -70,7 +70,7 @@ static void
 on_window_title_changed (VteTerminal *vteterminal,
                          gpointer     user_data)
 {
-    gtk_window_set_title (GTK_WINDOW (user_data), vte_terminal_get_window_title (vteterminal));
+    gtk_window_set_title (GTK_WINDOW (user_data), vte_terminal_get_termprop_string(vteterminal, "VTE_TERMPROP_XTERM_TITLE", NULL));
 }
 
 static gboolean
