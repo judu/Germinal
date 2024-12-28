@@ -19,6 +19,7 @@
 
 #include "germinal-terminal.h"
 #include "germinal-settings.h"
+#include <stdio.h>
 
 #define PCRE2_CODE_UNIT_WIDTH 0
 #include <pcre2.h>
@@ -199,45 +200,34 @@ germinal_terminal_is_zero (GerminalTerminal *self,
 
 gchar *
 germinal_terminal_get_url (GerminalTerminal *self,
-                           GdkEventButton   *button_event)
+                           double x,
+                           double y)
 {
     GerminalTerminalPrivate *priv = germinal_terminal_get_instance_private (self);
 
-    if (button_event) /* only access to cached url if no button_event available */
-    {
-        g_clear_pointer (&priv->url, g_free); /* free previous url */
-        gint tag; /* avoid stupid vte segv (said to be optional) */
-
-        priv->url = vte_terminal_match_check_event (VTE_TERMINAL (self), (GdkEvent *) button_event, &tag);
+    if (vte_terminal_get_allow_hyperlink(&self->parent_instance)) {
+        fprintf(stderr, "VTE allows hyperlink\n");
     }
-
+    if (x >= 0 && y >= 0) {
+        g_clear_pointer (&priv->url, g_free); /* free previous url */
+        fprintf(stderr, "Ask vte for hyperlink\n");
+        priv->url = vte_terminal_check_hyperlink_at (&self->parent_instance, x, y);
+    }
     return priv->url;
 }
 
 gboolean
 germinal_terminal_open_url (GerminalTerminal *self,
-                            GdkEventButton   *button_event)
+                            double x,
+                            double y)
 {
-    gchar *url = germinal_terminal_get_url (self, button_event);
-
-    if (!url)
-        return FALSE;
-
-    g_autoptr (GError) error = NULL;
-    /* Always strdup because we free later */
-    g_autofree gchar *browser = g_strdup (g_getenv ("BROWSER"));
-
-    /* If BROWSER is not in env, try xdg-open or fallback to firefox */
-    if (!browser)
-        browser = g_find_program_in_path ("xdg-open");
-    if (!browser)
-        browser = g_strdup ("firefox");
-
-    gchar *cmd[] = {browser, url, NULL};
-
-    if (!germinal_terminal_spawn (self, cmd, &error))
-        g_warning ("%s \"%s %s\": %s", _("Couldn't exec"), browser, url, error->message);
-
+    gchar *matched = vte_terminal_check_match_at(VTE_TERMINAL(self), x, y, NULL);
+    fprintf(stderr, "Is there a url under %f, %f? %s\n", x, y, matched);
+    if (matched != NULL) {
+        GtkUriLauncher *uri_launcher = gtk_uri_launcher_new(matched);
+        gtk_uri_launcher_launch(uri_launcher, NULL, NULL, NULL, NULL);
+    }
+    
     return TRUE;
 }
 
@@ -376,48 +366,38 @@ typedef enum {
 } ZoomAction;
 
 static gboolean
-on_scroll (GtkWidget      *widget,
-           GdkEventScroll *event)
+on_scroll (GtkEventControllerScroll* self,
+           gdouble dx,
+           gdouble dy,
+           gpointer user_data)
 {
-    GerminalTerminal *self = GERMINAL_TERMINAL (widget);
-    GerminalTerminalPrivate *priv = germinal_terminal_get_instance_private (self);
+    GerminalTerminal *germterm = GERMINAL_TERMINAL (gtk_event_controller_get_widget(GTK_EVENT_CONTROLLER(self)));
+    GerminalTerminalPrivate *priv = germinal_terminal_get_instance_private (germterm);
 
-    if (event->state & GDK_CONTROL_MASK)
+    if (gtk_event_controller_get_current_event_state(GTK_EVENT_CONTROLLER(self)) & GDK_CONTROL_MASK)
     {
         ZoomAction zoom_action = DO_NOTHING;
         gboolean natural_scroll = FALSE;
-        GdkScrollDirection direction;
-        gdouble y;
 
-        switch (gdk_device_get_source (gdk_event_get_source_device ((GdkEvent *) event)))
+        switch (gdk_device_get_source (gtk_event_controller_get_current_event_device (GTK_EVENT_CONTROLLER(self))))
         {
             case GDK_SOURCE_MOUSE:
                 natural_scroll = g_settings_get_boolean (priv->mouse_settings, "natural-scroll");
                 break;
+            case GDK_SOURCE_PEN:
+            case GDK_SOURCE_KEYBOARD:
+            case GDK_SOURCE_TOUCHSCREEN:
+            case GDK_SOURCE_TRACKPOINT:
+            case GDK_SOURCE_TABLET_PAD:
             case GDK_SOURCE_TOUCHPAD:
                 natural_scroll = g_settings_get_boolean (priv->touchpad_settings, "natural-scroll");
                 break;
         }
 
-        if (gdk_event_get_scroll_direction ((GdkEvent *) event, &direction))
-        {
-            switch (direction)
-            {
-                case GDK_SCROLL_UP:
-                    zoom_action = ZOOM;
-                    break;
-                case GDK_SCROLL_DOWN:
-                    zoom_action = DEZOOM;
-                    break;
-            }
-        }
-        else if (gdk_event_get_scroll_deltas ((GdkEvent*) event, NULL, &y))
-        {
-            if (y < 0)
-                zoom_action = ZOOM;
-            else
-                zoom_action = DEZOOM;
-        }
+        if (dy < 0)
+            zoom_action = ZOOM;
+        else
+            zoom_action = DEZOOM;
 
         if (natural_scroll)
         {
@@ -429,21 +409,26 @@ on_scroll (GtkWidget      *widget,
                 case DEZOOM:
                     zoom_action = ZOOM;
                     break;
+                case DO_NOTHING:
+                    zoom_action = DO_NOTHING;
+                    break;
             }
         }
 
         switch (zoom_action)
         {
             case ZOOM:
-                germinal_terminal_zoom (self);
+                germinal_terminal_zoom (germterm);
                 return GDK_EVENT_STOP;
             case DEZOOM:
-                germinal_terminal_dezoom (self);
+                germinal_terminal_dezoom (germterm);
+                return GDK_EVENT_STOP;
+            case DO_NOTHING:
                 return GDK_EVENT_STOP;
         }
     }
 
-    return GTK_WIDGET_CLASS (germinal_terminal_parent_class)->scroll_event (widget, event);
+    return GDK_EVENT_PROPAGATE;
 }
 
 static void
@@ -486,7 +471,8 @@ static void
 germinal_terminal_init (GerminalTerminal *self)
 {
     GerminalTerminalPrivate *priv = germinal_terminal_get_instance_private (self);
-    GdkKeymap *keymap = gdk_keymap_get_for_display (gdk_display_get_default ());
+    GdkDevice *keyboard = gdk_seat_get_keyboard (gdk_display_get_default_seat (gdk_display_get_default()));
+
     g_autofree GdkKeymapKey *zero_keys = NULL;
     g_autoptr (GError) error = NULL;
 
@@ -513,7 +499,7 @@ germinal_terminal_init (GerminalTerminal *self)
     update_scrollback           (settings, SCROLLBACK_KEY,           self);
     update_word_char_exceptions (settings, WORD_CHAR_EXCEPTIONS_KEY, self);
 
-    if (gdk_keymap_get_entries_for_keyval (keymap, GDK_KEY_0, &zero_keys, &priv->n_zero_keycodes))
+    if (gdk_display_map_keyval(gdk_display_get_default(), GDK_KEY_0, &zero_keys, (int *) &priv->n_zero_keycodes))
     {
         priv->zero_keycodes = g_new (guint, priv->n_zero_keycodes);
 
@@ -528,6 +514,7 @@ germinal_terminal_init (GerminalTerminal *self)
 
     VteTerminal *term = (VteTerminal *) self;
 
+    vte_terminal_set_allow_hyperlink     (term, TRUE);
     vte_terminal_set_mouse_autohide      (term, TRUE);
     vte_terminal_set_scroll_on_output    (term, FALSE);
     vte_terminal_set_scroll_on_keystroke (term, TRUE);
@@ -537,6 +524,10 @@ germinal_terminal_init (GerminalTerminal *self)
                                                               strlen (URL_REGEXP),
                                                               PCRE2_CASELESS | PCRE2_NOTEMPTY | PCRE2_MULTILINE,
                                                               &error);
+
+    GtkEventController *scroll_controller = gtk_event_controller_scroll_new(GTK_EVENT_CONTROLLER_SCROLL_VERTICAL);
+    gtk_widget_add_controller(GTK_WIDGET(self), scroll_controller);
+    CONNECT_SIGNAL (scroll_controller, "scroll", on_scroll, term);
 
     if (error)
     {
@@ -554,7 +545,6 @@ germinal_terminal_class_init (GerminalTerminalClass *klass)
 
     gobject_class->dispose = germinal_terminal_dispose;
     gobject_class->finalize = germinal_terminal_finalize;
-    GTK_WIDGET_CLASS (klass)->scroll_event = on_scroll;
 }
 
 GtkWidget *

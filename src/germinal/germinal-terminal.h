@@ -22,6 +22,10 @@
 
 #include "germinal-cleanup.h"
 
+#ifndef GETTEXT_PACKAGE
+#define GETTEXT_PACKAGE "Germinal"
+#endif /* GETTEXT_PACKAGE */
+
 #include <glib/gi18n-lib.h>
 
 #include <vte/vte.h>
@@ -32,8 +36,8 @@ G_BEGIN_DECLS
 G_DECLARE_FINAL_TYPE (GerminalTerminal, germinal_terminal, GERMINAL, TERMINAL, VteTerminal)
 
 gboolean germinal_terminal_is_zero     (GerminalTerminal *self, guint keycode);
-gchar   *germinal_terminal_get_url     (GerminalTerminal *self, GdkEventButton *button_event);
-gboolean germinal_terminal_open_url    (GerminalTerminal *self, GdkEventButton *button_event);
+gchar   *germinal_terminal_get_url     (GerminalTerminal *self, double x, double y);
+gboolean germinal_terminal_open_url    (GerminalTerminal *self, double x, double y);
 gboolean germinal_terminal_spawn       (GerminalTerminal *self, gchar **cmd, GError **error);
 void     germinal_terminal_zoom        (GerminalTerminal *self);
 void     germinal_terminal_dezoom      (GerminalTerminal *self);

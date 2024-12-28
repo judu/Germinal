@@ -46,17 +46,19 @@ G_BEGIN_DECLS
 #define WORD_CHAR_EXCEPTIONS_KEY "word-char-exceptions"
 
 /* Create a menu item, add it to the menu and bind its action */
-#define MENU_ACTION(name, label)                                        \
-    GtkWidget *name##_menu_item = gtk_menu_item_new_with_label (label); \
-    g_signal_connect (G_OBJECT (name##_menu_item),                      \
-                      "activate",                                       \
-                      G_CALLBACK (do_##name),                           \
-                      terminal);                                        \
-    gtk_menu_shell_append (GTK_MENU_SHELL (menu), name##_menu_item)
+#define MENU_ACTION(section_name, name, label)                                              \
+    GSimpleAction *act_##name = g_simple_action_new (#name, NULL);            \
+    g_signal_connect (G_OBJECT (act_##name),                                  \
+                      "activate",                                             \
+                      G_CALLBACK (do_##name),                                 \
+                      terminal);                                              \
+    GMenuItem *name##_menu_item = g_menu_item_new (label, "terminal.##name"); \
+    g_menu_append_item (section_name##_section, name##_menu_item)
 
 /* Add a separator to the menu */
-#define MENU_SEPARATOR \
-    gtk_menu_shell_append (GTK_MENU_SHELL (menu), gtk_separator_menu_item_new ())
+#define MENU_SECTION(s_name)                                           \
+    GMenu *s_name##_section = g_menu_new();                            \
+    g_menu_append_section (menu, NULL, (GMenuModel *) s_name##_section)
 
 /* Bind a singal to a callback */
 #define CONNECT_SIGNAL(obj, signal, fn, data) \

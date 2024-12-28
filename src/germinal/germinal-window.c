@@ -50,7 +50,7 @@ update_decorated (GSettings   *settings,
     GtkWindow *win = GTK_WINDOW (user_data);
 
     gtk_window_set_decorated (win, decorated);
-    gtk_window_set_hide_titlebar_when_maximized (win, !decorated);
+    // TODO: ensure titlebar is disabled here
 }
 
 static void
@@ -92,8 +92,5 @@ germinal_window_class_init (GerminalWindowClass *klass)
 GtkWidget *
 germinal_window_new (GtkApplication *application)
 {
-    return g_object_new (GERMINAL_TYPE_WINDOW,
-                         "application", application,
-                         "type",        GTK_WINDOW_TOPLEVEL,
-                         NULL);
+    return gtk_application_window_new (application);
 }
