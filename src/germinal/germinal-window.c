@@ -48,9 +48,10 @@ update_decorated (GSettings   *settings,
 {
     gboolean decorated = g_settings_get_boolean (settings, key);
     GtkWindow *win = GTK_WINDOW (user_data);
+    GtkWidget *titlebar = gtk_separator_new(GTK_ORIENTATION_HORIZONTAL);
 
-    gtk_window_set_decorated (win, decorated);
-    // TODO: ensure titlebar is disabled here
+    gtk_window_set_decorated (win, false);
+    gtk_window_set_titlebar(win, titlebar);
 }
 
 static void
@@ -92,5 +93,7 @@ germinal_window_class_init (GerminalWindowClass *klass)
 GtkWidget *
 germinal_window_new (GtkApplication *application)
 {
-    return gtk_application_window_new (application);
+    GtkWidget *win = gtk_application_window_new (application);
+    gtk_window_set_decorated(GTK_WINDOW(win), false);
+    return win;
 }

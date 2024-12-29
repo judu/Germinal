@@ -242,6 +242,7 @@ germinal_create_window (GApplication *application,
     GtkWidget *terminal = germinal_terminal_new ();
     VteTerminal *term = VTE_TERMINAL (terminal);
 
+    gtk_window_set_titlebar(win, NULL);
     /* Fill window */
     gtk_window_set_child (win, terminal);
     gtk_widget_grab_focus (terminal);
