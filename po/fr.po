@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Germinal\n"
 "Report-Msgid-Bugs-To: Marc-Antoine@Perennou.com\n"
-"POT-Creation-Date: 2021-04-16 21:36+0200\n"
+"POT-Creation-Date: 2024-12-25 10:36+0100\n"
 "PO-Revision-Date: 2011-09-23 16:05+0100\n"
 "Last-Translator: Marc-Antoine Perennou <Marc-Antoine@Perennou.com>\n"
 "Language-Team: French\n"
@@ -17,52 +17,52 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n > 1);\n"
 
-#: src/germinal/germinal.c:487
+#: src/germinal/germinal.c:284
 msgid "Copy url"
 msgstr "Copier la cible du lien"
 
-#: src/germinal/germinal.c:488
+#: src/germinal/germinal.c:285
 msgid "Open url"
 msgstr "Suivre le lien"
 
-#: src/germinal/germinal.c:492
+#: src/germinal/germinal.c:289
 msgid "Copy"
 msgstr "Copier"
 
-#: src/germinal/germinal.c:493
+#: src/germinal/germinal.c:290
 msgid "Copy as HTML"
 msgstr "Copier en tant que HTML"
 
-#: src/germinal/germinal.c:494
+#: src/germinal/germinal.c:291
 msgid "Paste"
 msgstr "Coller"
 
-#: src/germinal/germinal.c:498
+#: src/germinal/germinal.c:295
 msgid "Zoom"
 msgstr "Zoomer"
 
-#: src/germinal/germinal.c:499
+#: src/germinal/germinal.c:296
 msgid "Dezoom"
 msgstr "Dézoomzer"
 
-#: src/germinal/germinal.c:500
+#: src/germinal/germinal.c:297
 msgid "Reset zoom"
 msgstr "Restaurer zoom"
 
-#: src/germinal/germinal.c:504
+#: src/germinal/germinal.c:301
 msgid "Quit"
 msgstr "Quitter"
 
-#: src/germinal/germinal.c:597
+#: src/germinal/germinal.c:370
 msgid "display the version"
 msgstr "afficher la version"
 
-#: src/germinal/germinal.c:598
+#: src/germinal/germinal.c:371
 msgid "the command to launch"
 msgstr "la commande à lancer"
 
 #: data/appstream/org.gnome.Germinal.appdata.xml.in:5
-#: data/desktop/org.gnome.Germinal.desktop.in.in:4
+#: data/desktop/org.gnome.Germinal.desktop.in.in:3
 msgid "Germinal"
 msgstr "Germinal"
 
@@ -95,11 +95,11 @@ msgstr "Mise à jour de maintenance. Changements :"
 msgid "Compatibility with recent appstream-glib"
 msgstr "Compatibilité avec les versions récentes de appstream-glib"
 
-#: data/desktop/org.gnome.Germinal.desktop.in.in:5
+#: data/desktop/org.gnome.Germinal.desktop.in.in:4
 msgid "Minimalist vte-based terminal emulator"
 msgstr "Émulateur de terminal minimaliste basé sur vte"
 
-#: data/desktop/org.gnome.Germinal.desktop.in.in:6
+#: data/desktop/org.gnome.Germinal.desktop.in.in:5
 msgid "Terminal;"
 msgstr "Terminal;"
 

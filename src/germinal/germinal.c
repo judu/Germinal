@@ -19,39 +19,22 @@
 
 #include "germinal-window.h"
 
+#include <stdio.h>
 #include <stdlib.h>
 
 static gboolean
-on_button_press (GtkWidget      *widget,
-                 GdkEventButton *button_event,
-                 gpointer        user_data)
+on_button_press (GtkGestureClick *gesture,
+                 int _ignored,
+                 double x,
+                 double y,
+                 gpointer user_data)
 {
-    if (button_event->type != GDK_BUTTON_PRESS)
-        return FALSE;
-
-    GerminalTerminal *self = GERMINAL_TERMINAL (widget);
+    GerminalTerminal *self = GERMINAL_TERMINAL (gtk_event_controller_get_widget(GTK_EVENT_CONTROLLER(gesture)));
 
     /* Shift + Left clic */
-    if ((button_event->button == GDK_BUTTON_PRIMARY) &&
-        (button_event->state & GDK_SHIFT_MASK))
-            return germinal_terminal_open_url (self, button_event);
-    else if (button_event->button == GDK_BUTTON_SECONDARY)
-    {
-        gchar *url = germinal_terminal_get_url (self, button_event);
-
-        if (url) /* show url stuff */
-            gtk_widget_show_all (GTK_WIDGET (user_data));
-        else
-        {
-            /* hide url stuff */
-            GList *children = gtk_container_get_children (GTK_CONTAINER (user_data));
-            gtk_widget_hide (GTK_WIDGET (children->data));
-            gtk_widget_hide (GTK_WIDGET (children->next->data));
-            gtk_widget_hide (GTK_WIDGET (children->next->next->data));
-        }
-        gtk_menu_popup_at_pointer (GTK_MENU (user_data), (GdkEvent *) button_event);
-        return TRUE;
-    }
+    if ((gtk_gesture_single_get_current_button(GTK_GESTURE_SINGLE(gesture)) == GDK_BUTTON_PRIMARY) &&
+        (gtk_event_controller_get_current_event_state(GTK_EVENT_CONTROLLER(gesture)) & GDK_SHIFT_MASK))
+        return germinal_terminal_open_url (self, x, y);
 
     return FALSE;
 }
@@ -70,8 +53,34 @@ static void
 on_window_title_changed (VteTerminal *vteterminal,
                          gpointer     user_data)
 {
-    gtk_window_set_title (GTK_WINDOW (user_data), vte_terminal_get_window_title (vteterminal));
+    gtk_window_set_title (GTK_WINDOW (user_data), vte_terminal_get_termprop_string(vteterminal, "VTE_TERMPROP_XTERM_TITLE", NULL));
 }
+
+static void
+copy_text (GtkWidget *widget,
+           const gchar *text)
+{
+    GdkClipboard *clipboard = gtk_widget_get_clipboard (widget);
+    gdk_clipboard_set_text (clipboard, text);
+
+    GdkClipboard *pclipboard = gtk_widget_get_primary_clipboard (widget);
+    gdk_clipboard_set_text (clipboard, text);
+}
+
+static gboolean
+do_copy_url (GtkWidget *widget,
+             gpointer   user_data)
+{
+    gchar *url = germinal_terminal_get_url (GERMINAL_TERMINAL (user_data), -1, -1);
+
+    if (!url)
+        return FALSE;
+
+    copy_text (widget, url);
+
+    return TRUE;
+}
+
 
 static gboolean
 do_copy (GtkWidget *widget G_GNUC_UNUSED,
@@ -97,35 +106,11 @@ do_paste (GtkWidget *widget G_GNUC_UNUSED,
     return TRUE;
 }
 
-static void
-copy_text (GdkAtom      selection,
-           const gchar *text)
-{
-    GtkClipboard *clip = gtk_clipboard_get (selection);
-
-    gtk_clipboard_set_text (clip, text, -1);
-}
-
-static gboolean
-do_copy_url (GtkWidget *widget G_GNUC_UNUSED,
-             gpointer   user_data)
-{
-    gchar *url = germinal_terminal_get_url (GERMINAL_TERMINAL (user_data), NULL);
-
-    if (!url)
-        return FALSE;
-
-    copy_text (GDK_SELECTION_CLIPBOARD, url);
-    copy_text (GDK_SELECTION_PRIMARY, url);
-
-    return TRUE;
-}
-
 static gboolean
 do_open_url (GtkWidget *widget G_GNUC_UNUSED,
-             gpointer   user_data)
+             gpointer user_data)
 {
-    return germinal_terminal_open_url (GERMINAL_TERMINAL (user_data), NULL);
+    return germinal_terminal_open_url (GERMINAL_TERMINAL (user_data), -1, -1);
 }
 
 static gboolean
@@ -177,19 +162,24 @@ launch_cmd (GerminalTerminal *terminal,
 }
 
 static gboolean
-on_key_press (GtkWidget   *widget,
-              GdkEventKey *event,
-              gpointer     user_data)
+on_key_press (GtkEventControllerKey *self,
+              guint                  keyval,
+              guint                  keycode,
+              GdkModifierType        state,
+              gpointer               user_data)
 {
-    if (event->type != GDK_KEY_PRESS)
+    GtkEventController *controller = GTK_EVENT_CONTROLLER(self);
+
+    if (gdk_event_get_event_type(gtk_event_controller_get_current_event(GTK_EVENT_CONTROLLER(self))) != GDK_KEY_PRESS)
         return FALSE;
 
+    GtkWidget *widget = gtk_event_controller_get_widget(controller);
     GerminalTerminal *terminal = GERMINAL_TERMINAL (user_data);
 
     /* Ctrl + foo */
-    if (event->state & GDK_CONTROL_MASK)
+    if ((state & GDK_CONTROL_MASK) && (state & GDK_SHIFT_MASK))
     {
-        switch (event->keyval)
+        switch (keyval)
         {
         /* Clipboard */
         case GDK_KEY_C:
@@ -235,11 +225,11 @@ on_key_press (GtkWidget   *widget,
             return launch_cmd (terminal, "tmux resize-pane -Z");
         }
         
-        if (germinal_terminal_is_zero (terminal, event->hardware_keycode))
+        if (germinal_terminal_is_zero (terminal, keycode))
             return do_reset_zoom (widget, user_data);
     }
 
-    return GTK_WIDGET_GET_CLASS (user_data)->key_press_event (user_data, event);
+    return gtk_event_controller_key_forward(self, GTK_WIDGET(terminal));
 }
 
 typedef struct {
@@ -275,43 +265,30 @@ germinal_create_window (GApplication *application,
     VteTerminal *term = VTE_TERMINAL (terminal);
 
     /* Fill window */
-    gtk_container_add (GTK_CONTAINER (window), terminal);
+    gtk_window_set_child (win, terminal);
     gtk_widget_grab_focus (terminal);
 
-    /* Populate right click menu */
-    GtkWidget *menu = gtk_menu_new ();
+    // left mouse button
+    GtkGesture *gesture = gtk_gesture_click_new();
+    gtk_gesture_single_set_button (GTK_GESTURE_SINGLE(gesture),1);
+    gtk_event_controller_set_propagation_phase(GTK_EVENT_CONTROLLER(gesture), GTK_PHASE_BUBBLE);
+    gtk_widget_add_controller(terminal,GTK_EVENT_CONTROLLER(gesture));
 
-    MENU_ACTION (copy_url,   _("Copy url"));
-    MENU_ACTION (open_url,   _("Open url"));
-
-    MENU_SEPARATOR;
-
-    MENU_ACTION (copy,       _("Copy"));
-    MENU_ACTION (copy_html,  _("Copy as HTML"));
-    MENU_ACTION (paste,      _("Paste"));
-
-    MENU_SEPARATOR;
-
-    MENU_ACTION (zoom,       _("Zoom"));
-    MENU_ACTION (dezoom,     _("Dezoom"));
-    MENU_ACTION (reset_zoom, _("Reset zoom"));
-
-    MENU_SEPARATOR;
-
-    MENU_ACTION (quit,       _("Quit"));
+    GtkEventController* key_pressed_controller = gtk_event_controller_key_new();
+    gtk_event_controller_set_propagation_phase(key_pressed_controller, GTK_PHASE_CAPTURE);
+    gtk_widget_add_controller(window,GTK_EVENT_CONTROLLER(key_pressed_controller));
 
     /* Bind signals */
-    CONNECT_SIGNAL (window,   "key-press-event",      on_key_press,            terminal);
-    CONNECT_SIGNAL (terminal, "button-press-event",   on_button_press,         menu);
-    CONNECT_SIGNAL (terminal, "child-exited",         on_child_exited,         win);
-    CONNECT_SIGNAL (terminal, "window-title-changed", on_window_title_changed, win);
+    CONNECT_SIGNAL (key_pressed_controller,  "key-pressed",           on_key_press,             terminal);
+    CONNECT_SIGNAL (gesture,                 "pressed",               on_button_press,          NULL);
+    CONNECT_SIGNAL (terminal,                "child-exited",          on_child_exited,          win);
+    CONNECT_SIGNAL (terminal,                "window-title-changed",  on_window_title_changed,  win);
 
     /* Initialize title */
     on_window_title_changed (term, win);
 
     /* Show the window */
-    gtk_widget_show_all (menu);
-    gtk_widget_show_all (window);
+    gtk_widget_set_visible (window, true);
 
     /* Window settings */
     gtk_window_maximize (win);
@@ -359,7 +336,7 @@ main (gint   argc,
     bindtextdomain(GETTEXT_PACKAGE, LOCALEDIR);
     bind_textdomain_codeset (GETTEXT_PACKAGE, "UTF-8");
 
-    gtk_init (&argc, &argv);
+    gtk_init ();
     g_object_set (gtk_settings_get_default (), "gtk-application-prefer-dark-theme", TRUE, NULL);
 
     /* GtkApplication initialization */
