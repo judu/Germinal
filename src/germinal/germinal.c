@@ -155,7 +155,7 @@ on_key_press (GtkEventControllerKey *self,
     GerminalTerminal *terminal = GERMINAL_TERMINAL (user_data);
 
     /* Ctrl + foo */
-    if ((state & GDK_CONTROL_MASK) && (state & GDK_SHIFT_MASK))
+    if ((state & GDK_CONTROL_MASK))
     {
         switch (keyval)
         {
