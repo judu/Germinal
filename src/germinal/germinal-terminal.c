@@ -198,31 +198,12 @@ germinal_terminal_is_zero (GerminalTerminal *self,
     return FALSE;
 }
 
-gchar *
-germinal_terminal_get_url (GerminalTerminal *self,
-                           double x,
-                           double y)
-{
-    GerminalTerminalPrivate *priv = germinal_terminal_get_instance_private (self);
-
-    if (vte_terminal_get_allow_hyperlink(&self->parent_instance)) {
-        fprintf(stderr, "VTE allows hyperlink\n");
-    }
-    if (x >= 0 && y >= 0) {
-        g_clear_pointer (&priv->url, g_free); /* free previous url */
-        fprintf(stderr, "Ask vte for hyperlink\n");
-        priv->url = vte_terminal_check_hyperlink_at (&self->parent_instance, x, y);
-    }
-    return priv->url;
-}
-
 gboolean
 germinal_terminal_open_url (GerminalTerminal *self,
                             double x,
                             double y)
 {
     gchar *matched = vte_terminal_check_match_at(VTE_TERMINAL(self), x, y, NULL);
-    fprintf(stderr, "Is there a url under %f, %f? %s\n", x, y, matched);
     if (matched != NULL) {
         GtkUriLauncher *uri_launcher = gtk_uri_launcher_new(matched);
         gtk_uri_launcher_launch(uri_launcher, NULL, NULL, NULL, NULL);

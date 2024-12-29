@@ -36,7 +36,6 @@ G_BEGIN_DECLS
 G_DECLARE_FINAL_TYPE (GerminalTerminal, germinal_terminal, GERMINAL, TERMINAL, VteTerminal)
 
 gboolean germinal_terminal_is_zero     (GerminalTerminal *self, guint keycode);
-gchar   *germinal_terminal_get_url     (GerminalTerminal *self, double x, double y);
 gboolean germinal_terminal_open_url    (GerminalTerminal *self, double x, double y);
 gboolean germinal_terminal_spawn       (GerminalTerminal *self, gchar **cmd, GError **error);
 void     germinal_terminal_zoom        (GerminalTerminal *self);

@@ -68,21 +68,6 @@ copy_text (GtkWidget *widget,
 }
 
 static gboolean
-do_copy_url (GtkWidget *widget,
-             gpointer   user_data)
-{
-    gchar *url = germinal_terminal_get_url (GERMINAL_TERMINAL (user_data), -1, -1);
-
-    if (!url)
-        return FALSE;
-
-    copy_text (widget, url);
-
-    return TRUE;
-}
-
-
-static gboolean
 do_copy (GtkWidget *widget G_GNUC_UNUSED,
          gpointer   user_data)
 {
@@ -104,13 +89,6 @@ do_paste (GtkWidget *widget G_GNUC_UNUSED,
 {
     vte_terminal_paste_clipboard (VTE_TERMINAL (user_data));
     return TRUE;
-}
-
-static gboolean
-do_open_url (GtkWidget *widget G_GNUC_UNUSED,
-             gpointer user_data)
-{
-    return germinal_terminal_open_url (GERMINAL_TERMINAL (user_data), -1, -1);
 }
 
 static gboolean
